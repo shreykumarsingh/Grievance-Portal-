@@ -1,0 +1,65 @@
+[
+    {
+        "name":"Aditya Sharma",
+        "level":"1",
+        "department":"Health",
+        "email":"aditya@gmail.com",
+        "password":"adityamaali123",
+        "district":"delhi",
+        "complaints": []
+    },
+    {
+        "name":"Wael Abrar",
+        "level":"2",
+        "department":"Pension",
+        "email":"wael@gmail.com",
+        "password":"gujaratkawael",
+        "district":"delhi",
+        "complaints": []
+    },
+    {
+        "name":"Aryan Anand",
+        "level":"3",
+        "department":"Pension",
+        "email":"aryan@gmail.com",
+        "password":"blackboy",
+        "district":"delhi",
+        "complaints": []
+    },
+    {
+        "name":"Amitesh",
+        "level":"1",
+        "department":"other",
+        "email":"zeaton@bmsce.ac.in",
+        "password":"amitanshu",
+        "district":"panipat",
+        "complaints": []
+    },
+    {
+        "name":"Aastha",
+        "level":"2",
+        "department":"Health",
+        "email":"asta@bmsce.ac.in",
+        "password":"gaypasta",
+        "district":"panipat",
+        "complaints": []
+    },
+    {
+        "name":"Ankur TA",
+        "level":"3",
+        "department":"Education",
+        "email":"ankur@bmsce.ac.in",
+        "password":"ankurgay",
+        "district":"panipat",
+        "complaints": []
+    },
+    {
+        "name":"Rahul Chhabra",
+        "level":"2",
+        "department":"other",
+        "email":"chhaber@bmsce.ac.in",
+        "password":"chhabruh",
+        "district":"allahabad",
+        "complaints": []
+    }
+]
