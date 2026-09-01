@@ -1,10 +1,12 @@
 import React, { Fragment } from "react";
 import axios from "axios";
 import moment from "moment";
+import { useNavigate } from "react-router-dom";
 import Modal from "./Modal";
 import Loading from "./Loading";
 export default function MyGrievance(props) {
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
 
   let config = {
     method: "get",
@@ -23,7 +25,7 @@ export default function MyGrievance(props) {
       .request(config)
       .then((response) => {
         console.log(JSON.stringify(response.data));
-        setGrievances(response.data.complaints);
+        setGrievances(response.data.complaints || []);
       })
       .catch((error) => {
         console.log(error);
@@ -55,7 +57,8 @@ export default function MyGrievance(props) {
       })
       .catch((error) => {
         console.log(error);
-        alert("Error Occured")
+        const errMsg = error.response?.data?.msg || error.response?.data?.message || error.message || "Failed to reopen";
+        alert("Error Occurred: " + errMsg);
       });
   }
   function handleReminder(id){
@@ -76,8 +79,10 @@ export default function MyGrievance(props) {
         window.location.reload(true);
       })
       .catch((error) => {
+        setLoading(false);
         console.log(error);
-        alert("Error Occured")
+        const errMsg = error.response?.data?.msg || error.response?.data?.message || error.message || "Failed to send reminder";
+        alert("Error Occurred: " + errMsg);
       });
   }
   const [loading, setLoading] = React.useState(false);
@@ -117,8 +122,10 @@ console.log(rating);
           setLoading(false);
         })
         .catch((error) => {
+          setLoading(false);
           console.log(error);
-          alert(error)
+          const errMsg = error.response?.data?.msg || error.response?.data?.message || error.message || "Failed to rate";
+          alert("Error Occurred: " + errMsg);
         });
     }
   }
@@ -143,12 +150,19 @@ console.log(rating);
       })
       .catch((error) => {
         console.log(error);
-        alert("Error Occured")
         setLoading(false)
+        const errMsg = error.response?.data?.msg || error.response?.data?.message || error.message || "Failed to delete";
+        alert("Error Occurred: " + errMsg);
       });
   }
-  const grievanceData = grievances.map((grievance) => (
-    <Fragment>
+  const grievanceData = grievances.map((grievance) => {
+    const lastRemindedTime = grievance.lastRemindedAt ? new Date(grievance.lastRemindedAt).getTime() : 0;
+    const diffDays = Math.floor((Date.now() - lastRemindedTime) / (1000 * 60 * 60 * 24));
+    const isCooldownActive = grievance.lastRemindedAt != null && diffDays < 7;
+    const remainingDays = isCooldownActive ? (7 - diffDays) : 0;
+
+    return (
+    <Fragment key={grievance._id}>
       <tr
         className={
           grievance.status != "resolved"
@@ -168,14 +182,21 @@ console.log(rating);
           {grievance.subject}
         </td>
         <td className="px-4 py-3 text-ms font-semibold border">
+          {grievance.officerID
+            ? `${grievance.officerID.name} (L${grievance.officerID.level})`
+            : "Department Officer"}
+        </td>
+        <td className="px-4 py-3 text-ms font-semibold border">
           {grievance.status}
         </td>
         <td className="px-4 py-3 text-ms font-semibold border">
+          {grievance.completionDateTime
+            ? moment(grievance.completionDateTime).format("DD/MM/YYYY HH:mm")
+            : (grievance.status === "resolved" ? "Resolved" : "N/A")}
+        </td>
+        <td className="px-4 py-3 text-ms font-semibold border">
           {grievance.status != "resolved" ? (
-            grievance.lastRemindedAt == null ||
-            new Date().getDate() -
-              new Date(grievance.lastRemindedAt).getDate() >
-              1 ? (
+            !isCooldownActive ? (
               <>
                 <button
                   className="bg-light-green hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
@@ -186,11 +207,7 @@ console.log(rating);
                 {loading == true && <Loading />}
               </>
             ) : (
-              `Cooldown for ${
-                7 -
-                (new Date().getDate() -
-                  new Date(grievance.lastRemindedAt).getDate())
-              } more days`
+              `Cooldown for ${remainingDays} more day${remainingDays > 1 ? 's' : ''}`
             )
           ) : (
             "resolved"
@@ -261,7 +278,8 @@ console.log(rating);
         </td>
       </tr>
     </Fragment>
-  ));
+    );
+  });
 function checkLogin() {
   if (!token) {
     navigate("/userAdminLogin");
@@ -289,7 +307,9 @@ function checkLogin() {
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Department</th>
                     <th className="px-4 py-3">Grievance</th>
+                    <th className="px-4 py-3">Assigned Officer</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Completion Time</th>
                     <th className="px-4 py-3">Reminder</th>
                     <th className="px-4 py-3 mx-auto">View Action History</th>
                     <th className="px-4 py-3 mx-auto">Reopen</th>

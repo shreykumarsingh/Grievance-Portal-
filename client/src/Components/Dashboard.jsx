@@ -49,19 +49,21 @@ export default function Dashboard(props){
             {props.third}
           </h3>
         </div>
-        <div className="dash-box">
-          <h3
-            className={
-              props.clicked == "4"
-                ? "mb-16 text-white text-center text-2xl bg-dark-cyan w-4/5 rounded-md mx-auto p-3 cursor-pointer"
-                : "mb-16 text-white text-center text-2xl  w-4/5 rounded-md mx-auto p-3 cursor-pointer"
-            }
-            value="4"
-            onClick={() => props.handle("4", "update")}
-          >
-            {props.fourth}
-          </h3>
-        </div>
+        {props.fourth && props.fourth !== "" && (
+          <div className="dash-box">
+            <h3
+              className={
+                props.clicked == "4"
+                  ? "mb-16 text-white text-center text-2xl bg-dark-cyan w-4/5 rounded-md mx-auto p-3 cursor-pointer"
+                  : "mb-16 text-white text-center text-2xl  w-4/5 rounded-md mx-auto p-3 cursor-pointer"
+              }
+              value="4"
+              onClick={() => props.handle("4", "update")}
+            >
+              {props.fourth}
+            </h3>
+          </div>
+        )}
           <h3 className="mb-4 text-white text-center text-2xl  w-4/5 rounded-md mx-auto p-3 cursor-pointer" onClick={handleLogout}>LOGOUT</h3>
       </div>
     );

@@ -71,11 +71,19 @@ const ComplaintSchema = new mongoose.Schema(
     reopenCount: {
       type: Number,
       default: 0,
+    },
+    completionDateTime: {
+      type: Date,
+      default: null,
     }
-    //
   },
   { timestamps: true }
 );
+
+ComplaintSchema.methods.setCompletionDateTime = async function (dateTime) {
+  this.completionDateTime = dateTime ? new Date(dateTime) : new Date();
+  await this.save();
+};
 
 // ComplaintSchema.methods.sendMail = async function (officer) {
 

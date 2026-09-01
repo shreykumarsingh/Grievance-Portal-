@@ -1,9 +1,11 @@
 import React from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Modal from "./Modal";
 import Loading from "./Loading";
 export default function GrievanceStatus(props) {
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
   let config = {
     method: "get",
     maxBodyLength: Infinity,
@@ -57,10 +59,11 @@ export default function GrievanceStatus(props) {
         window.location.reload(true);
       })
       .catch((error) => {
+        setLoading(false);
         console.log(error);
-        alert("Error Occured:"+error.response.data.message);
+        alert("Error Occured:" + (error.response?.data?.msg || error.response?.data?.message || error.message));
       });  
-    }
+  }
     const [loading, setLoading] = React.useState(false); 
     complaints.sort(function (a, b) {
       return a.status > b.status ? 1 : b.status > a.status ? -1 : 0;
@@ -104,20 +107,26 @@ export default function GrievanceStatus(props) {
            : "not updated"}
        </td>
        <td className="px-4 py-3 text-ms font-semibold border">
-         {complaint.actionHistory[complaint.actionHistory.length - 1]
-           .officerLevel != "3" &&
-           complaint.status != "resolved" && (
-             <>
-               <button
-                 className="bg-light-green hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                 onClick={() => handleForward(complaint)}
-               >
-                 Forward
-               </button>
-               {loading && <Loading />}
-             </>
-           )}
+         {complaint.completionDateTime
+           ? new Date(complaint.completionDateTime).toLocaleString()
+           : (complaint.status === "resolved" ? "Resolved" : "N/A")}
        </td>
+        <td className="px-4 py-3 text-ms font-semibold border">
+          {complaint.status !== "resolved" &&
+            (!complaint.actionHistory ||
+              complaint.actionHistory.length === 0 ||
+              complaint.actionHistory[complaint.actionHistory.length - 1]?.officerLevel != 3) && (
+              <>
+                <button
+                  className="bg-light-green hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  onClick={() => handleForward(complaint)}
+                >
+                  Forward
+                </button>
+                {loading && <Loading />}
+              </>
+            )}
+        </td>
        <td className="px-4 py-3 text-ms font-semibold border">
          <button
            className="bg-light-green hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
@@ -168,6 +177,7 @@ export default function GrievanceStatus(props) {
                     <th className="px-4 py-3">Created by</th>
                     <th className="px-4 py-3 mx-auto">Status</th>
                     <th className="px-4 py-3 mx-auto">UpdatedTime</th>
+                    <th className="px-4 py-3 mx-auto">Completion Time</th>
                     <th className="px-4 py-3 mx-auto">Forward</th>
                     <th className="px-4 py-3 mx-auto">Action History</th>
                     <th className="px-4 py-3 mx-auto">Rating</th>

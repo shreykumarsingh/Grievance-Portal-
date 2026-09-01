@@ -1,21 +1,25 @@
 import React from 'react'
 import pfp from "../Images/pfp.png";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Loading from "./Loading";
 export default function MainAdminProfile(props) {
     const [adminData,setAdminData]=React.useState({})
     const token = localStorage.getItem("token");
-    let config = {
-      method: "get",
-      maxBodyLength: Infinity,
-      url: "/api/v1/manage/",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization:
-          `Bearer ${token}`,
-      },
-    };
-    React.useState(() => {
+    const navigate = useNavigate();
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+      let config = {
+        method: "get",
+        maxBodyLength: Infinity,
+        url: "/api/v1/manage/",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            `Bearer ${token}`,
+        },
+      };
       axios
         .request(config)
         .then((response) => {
@@ -25,9 +29,9 @@ export default function MainAdminProfile(props) {
         })
         .catch((error) => {
           console.log(error);
+          setLoading(false);
         }); 
     }, []);
-    const [loading, setLoading] = React.useState(true);
     function checkLogin() {
         if (!token) {
             navigate("/userAdminLogin");

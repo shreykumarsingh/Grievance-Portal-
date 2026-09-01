@@ -19,7 +19,7 @@ export default function AdminPage(){
     const token=localStorage.getItem("token")
     const[visible,setVisible]=React.useState("profile")
    return (
-     <div className={token==null?"":"admin-Page h-3/4 "}>
+     <div className={token==null?"":"admin-Page min-h-screen flex flex-col justify-between"}>
        <div className="navbar hidden md:block">
          <UserNavbar
            first=""
@@ -39,7 +39,7 @@ export default function AdminPage(){
            handle={handleClick}
          />
        </div>
-       <div className="User-page-content h-100 hidden md:flex">
+       <div className="User-page-content min-h-screen hidden md:flex">
          <Dashboard
            clicked={isClicked}
            visible={visible}

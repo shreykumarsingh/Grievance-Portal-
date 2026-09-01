@@ -13,12 +13,18 @@ const { config } = require("dotenv");
 require('dotenv').config();
 
 const getAllTasks = async (req, res) => {
-  // console.log(req.officer);
-  //{ officerID: req.officer.officerId }
-  const tasks = await Complaint.find({ officerID: req.officer.officerId }).sort(
-    "createdAt"
-  );
-  // console.log(tasks)
+  const officer = await Officer.findById(req.officer.officerId);
+  if (!officer) {
+    throw new NotFoundError("Officer not found");
+  }
+
+  const tasks = await Complaint.find({
+    $or: [
+      { department: officer.department },
+      { officerID: officer._id }
+    ]
+  }).sort("-createdAt");
+
   res.status(StatusCodes.OK).json({ count: tasks.length, tasks });
 };
 
@@ -37,40 +43,98 @@ const getTask = async (req, res) => {
 
 const passTask = async (req, res) => {
   const {
-    body: { forwardedTo },
+    body: { forwardedTo, targetDepartment, department },
     officer: { officerId },
     params: { id: complaintId },
   } = req;
 
-  // if (req.body.level === "") {
-  //   throw new BadRequestError("Please provide a level");
-  // }
-
   const officer = await Officer.findOne({ _id: officerId });
-  const compl = await Complaint.findOne({ _id: complaintId })
+  const compl = await Complaint.findOne({ _id: complaintId });
   if (!compl) {
     throw new NotFoundError("complaint not found");
   }
 
-  if (compl.officerID != officerId) {
+  if (compl.officerID.toString() !== officerId && compl.department !== officer.department) {
     throw new UnauthenticatedError("not authorized to update this task");
   }
   if (compl.status === "resolved") {
-    throw new BadRequestError("Complaint already resolved. It can't be passed.")
+    throw new BadRequestError("Complaint already resolved. It can't be passed.");
   }
 
+  const selectedDepartment = targetDepartment || department;
+  if (selectedDepartment && selectedDepartment !== compl.department) {
+    let newOfficer = await Officer.findOne({
+      district: officer.district,
+      department: selectedDepartment,
+      level: 1,
+    });
+    if (!newOfficer) {
+      newOfficer = await Officer.findOne({
+        district: officer.district,
+        department: selectedDepartment,
+      });
+    }
+    if (!newOfficer) {
+      newOfficer = await Officer.findOne({
+        department: selectedDepartment,
+      });
+    }
+    if (!newOfficer) {
+      throw new NotFoundError(`No officer available in ${selectedDepartment} department`);
+    }
 
+    compl.department = selectedDepartment;
+    compl.officerID = newOfficer._id;
+    await compl.save();
 
-  const newOfficerId = await Officer.findOne({
-    level: (officer.level + 1),
+    await compl.addFeedback(
+      officer.name,
+      officer.level,
+      `Transferred complaint from ${officer.department} to ${selectedDepartment} department`
+    );
+    await compl.addFeedback(
+      newOfficer.name,
+      newOfficer.level,
+      `Complaint received by ${selectedDepartment} department officer (${newOfficer.name})`
+    );
+
+    const body = `Your complaint "${compl.subject}" has been transferred to the ${selectedDepartment} department.`;
+    const user = await User.findOne({ _id: compl.createdBy });
+    if (user && user.email) {
+      await sendEmail({
+        to: user.email,
+        subject: `Department Update about your grievance "${compl.subject}"`,
+        text: `Update: ${body}`,
+      });
+    }
+
+    return res.status(StatusCodes.OK).json({ complaint: compl });
+  }
+
+  let newOfficerId = await Officer.findOne({
+    level: officer.level + 1,
     department: officer.department,
     district: officer.district,
   });
-  // console.log(newOfficerId)
+
+  if (!newOfficerId) {
+    newOfficerId = await Officer.findOne({
+      level: { $gt: officer.level },
+      department: officer.department,
+      district: officer.district,
+    });
+  }
+
+  if (!newOfficerId) {
+    newOfficerId = await Officer.findOne({
+      level: { $gt: officer.level },
+      department: officer.department,
+    });
+  }
 
   if (!newOfficerId) {
     throw new NotFoundError(
-      `no higher ${officer.department} officer in the district`
+      `No higher level officer available in ${officer.department} department`
     );
   }
 
@@ -80,32 +144,27 @@ const passTask = async (req, res) => {
     { new: true, runValidators: true }
   );
 
-
-
-  // console.log(officer.name, officer.level)
-  // console.log(newOfficerId.name, newOfficerId.level)
-  // if (complaint.officerID != officerId) {
-  //   throw new UnauthenticatedError("not authorized to pass this task");
-  // }
-
   await complaint.addFeedback(
-    officer.name, officer.level, `Forwarded the complaint to the level ${newOfficerId.level} officer`
+    officer.name,
+    officer.level,
+    `Forwarded the complaint to the level ${newOfficerId.level} officer`
   );
   await complaint.addFeedback(
-    newOfficerId.name, newOfficerId.level, `Complaint received by level ${newOfficerId.level} officer`
+    newOfficerId.name,
+    newOfficerId.level,
+    `Complaint received by level ${newOfficerId.level} officer`
   );
 
+  const body = `Complaint transferred to the level ${newOfficerId.level} officer`;
 
-  const body = `Complaint transferred to the level ${newOfficerId.level} officer`
-
-  const user = await User.findOne({ _id: complaint.createdBy })
-  await sendEmail({ to: user.email, subject: `New Update about your grievance "${complaint.subject}"`, text: `Update: ${body}` });
-  // const userPhone = "+91" + user.phone.toString();
-  // const userPhone = "+91" + user.phone.toString();
-  // console.log(userPhone)
-  // await sendSMS(userPhone, body)
-  // await sendSMS(userPhone, body)
-  // console.log(complaint)
+  const user = await User.findOne({ _id: complaint.createdBy });
+  if (user && user.email) {
+    await sendEmail({
+      to: user.email,
+      subject: `New Update about your grievance "${complaint.subject}"`,
+      text: `Update: ${body}`,
+    });
+  }
 
   res.status(StatusCodes.OK).json({ complaint });
 };
@@ -132,7 +191,8 @@ const updateTask = async (req, res) => {
     throw new BadRequestError("Complaint already resolved. No more updations allowed.")
   }
 
-  if (complaint.officerID != officerId) {
+  const isAssignedOfficer = complaint.officerID && complaint.officerID.toString() === officerId;
+  if (!isAssignedOfficer && complaint.department !== officer.department) {
     throw new UnauthenticatedError("not authorized to update this task");
   }
 
@@ -145,26 +205,29 @@ const updateTask = async (req, res) => {
 
   if (req.body.status) {
     await complaint.updateStatus(req.body.status);
-
+    if (req.body.status === "resolved") {
+      const completionTime = req.body.completionDateTime || Date.now();
+      await complaint.setCompletionDateTime(completionTime);
+    }
   }
 
   if (req.body.feedback) {
     await complaint.addFeedback(officer.name, officer.level, req.body.feedback);
-
   } else {
     await complaint.addFeedback(officer.name, officer.level, `Status updated.`);
-
   }
 
-  const bod = `Status updated about your grievance "${complaint.subject}"`
-  const user = await User.findOne({ _id: complaint.createdBy })
-  await sendEmail({ to: user.email, subject: `New Update about your grievance "${complaint.subject}"`, text: `Update: ${bod}` });
-  const userPhone = "+91" + user.phone.toString();
-  // console.log(userPhone)
-  // await sendSMS(userPhone, bod)
+  const completionStr = complaint.completionDateTime
+    ? ` on ${new Date(complaint.completionDateTime).toLocaleString()}`
+    : "";
+  const bod = req.body.status === "resolved"
+    ? `Your grievance "${complaint.subject}" has been RESOLVED${completionStr}.`
+    : `Status updated about your grievance "${complaint.subject}" to "${req.body.status}".`;
 
-
-  // console.log(complaint)
+  const user = await User.findOne({ _id: complaint.createdBy });
+  if (user && user.email) {
+    await sendEmail({ to: user.email, subject: `New Update about your grievance "${complaint.subject}"`, text: `Update: ${bod}` });
+  }
 
   res.status(StatusCodes.OK).json({ complaint });
 };

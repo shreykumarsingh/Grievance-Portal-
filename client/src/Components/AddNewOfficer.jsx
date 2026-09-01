@@ -1,53 +1,57 @@
 import React from 'react'
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Loading from "./Loading";
 
 export default function AddNewOfficer(props) {
   const token = localStorage.getItem("token");
-     const [data, setData] = React.useState({
-      name: "",level:-1,department:"",email:"",password:""
-     });
-     function handleChange(e){
-      setData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-     }
-      const [loading, setLoading] = React.useState(false);
-      function checkLogin() {
-        if (!token) {
-          navigate("/userAdminLogin");
-        }
-      }
-      console.log(data.level)
-      function handleSubmit(){
-        if(data.name=="" || data.level==-1 || data.department=="" || data.email=="" || data.password==""){
-          alert("Please fill all the fields");
-        }
-        else{
-          setLoading(true)
-          let config = {
-            method: "post",
-            maxBodyLength: Infinity,
-            url: "/api/v1/manage/registerOfficer",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization:
-                `Bearer ${token}`,
-            },
-            data: data,
-          };
-          axios
-            .request(config)
-            .then((response) => {
-              console.log(JSON.stringify(response.data));
-              setLoading(false)
-              alert("Officer Added Successfully")
-              window.location.reload(true);
-            })
-            .catch((error) => {
-              console.log(error);
-              alert("Error Occured:"+error.response.data.message);
-            });
-        }
-      }
+  const navigate = useNavigate();
+  const [data, setData] = React.useState({
+    name: "", level: -1, department: "", email: "", password: ""
+  });
+  function handleChange(e) {
+    setData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+  const [loading, setLoading] = React.useState(false);
+  function checkLogin() {
+    if (!token) {
+      navigate("/userAdminLogin");
+    }
+  }
+  console.log(data.level)
+  function handleSubmit() {
+    if (data.name == "" || data.level == -1 || data.department == "" || data.email == "" || data.password == "") {
+      alert("Please fill all the fields");
+    }
+    else {
+      setLoading(true)
+      let config = {
+        method: "post",
+        maxBodyLength: Infinity,
+        url: "/api/v1/manage/registerOfficer",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            `Bearer ${token}`,
+        },
+        data: data,
+      };
+      axios
+        .request(config)
+        .then((response) => {
+          console.log(JSON.stringify(response.data));
+          setLoading(false)
+          alert("Officer Added Successfully")
+          window.location.reload(true);
+        })
+        .catch((error) => {
+          setLoading(false);
+          console.log(error);
+          const errMsg = error.response?.data?.msg || error.response?.data?.message || error.message || "Failed to add officer";
+          alert("Error Occurred: " + errMsg);
+        });
+    }
+  }
   return (
     <div>
       {checkLogin}

@@ -67,23 +67,39 @@ const getOfficerData = async (req, res) => {
             else resolvedcnt++;
         }
 
-        let rating = await OfficerRatings.findOne({ OfficerId: officer._id })
-        // console.log(pendingcnt, inprocesscnt, resolvedcnt, rating.avgRating)
+        let rating = await OfficerRatings.findOne({ OfficerId: officer._id });
         data.push({
             name: officer.name,
             email: officer.email,
             department: officer.department,
             level: officer.level,
-            avgRating: rating.avgRating,
+            avgRating: rating ? rating.avgRating : null,
             pendingCount: pendingcnt,
             inProcessCount: inprocesscnt,
             resolvedCount: resolvedcnt,
             _id: officer._id
-        })
+        });
     }
 
     res.status(StatusCodes.OK).json({ count: data.length, data })
 }
 
+const getDistrictComplaints = async (req, res) => {
+    const admin = await Admin.findOne({ _id: req.admin.adminId });
+    const officers = await Officer.find({ district: admin.district }).select('_id');
+    const officerIds = officers.map(o => o._id);
 
-module.exports = { registerOfficer, getAdminDetails, getOfficerData, deleteOfficer }
+    let complaints = await Complaint.find({
+        $or: [
+            { officerID: { $in: officerIds } },
+            { _id: { $exists: true } }
+        ]
+    })
+    .populate('createdBy', 'name email district')
+    .populate('officerID', 'name email department level district')
+    .sort('-createdAt');
+
+    res.status(StatusCodes.OK).json({ count: complaints.length, complaints });
+}
+
+module.exports = { registerOfficer, getAdminDetails, getOfficerData, deleteOfficer, getDistrictComplaints }

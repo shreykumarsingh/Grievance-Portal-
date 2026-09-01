@@ -10,9 +10,9 @@ const {
 const sendEmail = require("../utils/sendEmail");
 
 const getAllComplaints = async (req, res) => {
-  const complaints = await Complaint.find({ createdBy: req.user.userId }).sort(
-    "createdAt"
-  );
+  const complaints = await Complaint.find({ createdBy: req.user.userId })
+    .populate({ path: "officerID", select: "name email level department" })
+    .sort("createdAt");
   res.status(StatusCodes.OK).json({ count: complaints.length, complaints });
 };
 
@@ -84,14 +84,27 @@ const createComplaint = async (req, res) => {
 
   const user = await User.findOne({ _id: req.user.userId });
 
-  const officer = await Officer.findOne({
+  let officer = await Officer.findOne({
     district: user.district,
     level: 1,
     department: req.body.department,
   });
 
   if (!officer) {
-    throw new NotFoundError("No officer in this district");
+    officer = await Officer.findOne({
+      district: user.district,
+      department: req.body.department,
+    });
+  }
+
+  if (!officer) {
+    officer = await Officer.findOne({
+      department: req.body.department,
+    });
+  }
+
+  if (!officer) {
+    throw new NotFoundError(`No officer available for department "${req.body.department}"`);
   }
 
   const complaint = await Complaint.create(req.body);
@@ -114,7 +127,7 @@ const deleteComplaint = async (req, res) => {
     params: { id: complaintId },
   } = req;
 
-  const complaint = await Complaint.findByIdAndRemove({
+  const complaint = await Complaint.findOne({
     _id: complaintId,
     createdBy: userId,
   });
@@ -123,7 +136,7 @@ const deleteComplaint = async (req, res) => {
     throw new NotFoundError("Complaint not found");
   }
   if (complaint.status === 'resolved') {
-    throw new BadRequestError("Cannot delete a resolved complaint")
+    throw new BadRequestError("Cannot delete a resolved complaint");
   }
 
   await Complaint.deleteOne({ _id: complaintId });
@@ -168,29 +181,38 @@ const rateOfficer = async (req, res) => {
     user: { userId },
     params: { id: complaintId },
   } = req;
-  // console.log(req);
-  const numberofstars = req.body.rating;
+
+  const numberofstars = Number(req.body.rating);
   const complaint = await Complaint.findOne({ _id: complaintId });
+
+  if (!complaint) {
+    throw new NotFoundError("Complaint not found");
+  }
 
   if (complaint.status !== "resolved") {
     throw new BadRequestError("Can't give feedback unless complaint is resolved.");
   }
   if (complaint.isRated) {
-    throw new BadRequestError("Complaint already rated.")
+    throw new BadRequestError("Complaint already rated.");
   }
 
   const officer = await Officer.findOne({ _id: complaint.officerID });
 
+  let officerRating = await OfficerRatings.findOne({ OfficerId: complaint.officerID });
+  if (!officerRating && complaint.officerID) {
+    officerRating = await OfficerRatings.create({ OfficerId: complaint.officerID, avgRating: null, ratings: [] });
+  }
 
-  const officerRating = await OfficerRatings.findOne({ OfficerId: complaint.officerID });
-
-  // console.log(officerRating);
-  await officerRating.addRating(numberofstars, complaintId, userId);
+  if (officerRating) {
+    await officerRating.addRating(numberofstars, complaintId, userId);
+  }
   await complaint.setRated(numberofstars);
 
   const bod = `You have been rated! \nComplaint subject : ${complaint.subject} \nRating : ${numberofstars}`;
 
-  await sendEmail({ to: officer.email, subject: "You have been rated!", text: `Message from grievance portal: ${bod}` });
+  if (officer && officer.email) {
+    await sendEmail({ to: officer.email, subject: "You have been rated!", text: `Message from grievance portal: ${bod}` });
+  }
 
   res.status(StatusCodes.OK).json({ officer });
 };

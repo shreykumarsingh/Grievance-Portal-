@@ -5,6 +5,8 @@ import Footer from "./Footer";
 import MainAdminProfile from './MainAdminProfile';
 import ViewOfficerDetails from './ViewOfficerDetails';
 import AddNewOfficer from './AddNewOfficer';
+import AdminGrievanceView from './AdminGrievanceView';
+
 export default function MainAdminPage() {
     const token=localStorage.getItem("token")
     const [isClicked, setIsClicked] = React.useState("1");
@@ -26,7 +28,7 @@ export default function MainAdminPage() {
           first="HOME"
           second="OFFICERS"
           third="NEW OFFICER"
-          fourth=""
+          fourth="GRIEVANCES"
           hidden={true}
           handle={handleClick}
         />
@@ -39,7 +41,7 @@ export default function MainAdminPage() {
           first="HOME"
           second="OFFICERS DETAILS"
           third="NEW OFFICER"
-          fourth=""
+          fourth="GRIEVANCES"
         />
         <MainAdminProfile
             visible={visible}
@@ -47,6 +49,7 @@ export default function MainAdminPage() {
         
         <ViewOfficerDetails visible={visible} />
         <AddNewOfficer visible={visible} />
+        <AdminGrievanceView visible={visible} />
       </div>
       <div className="User-page-content h-100 md:hidden relative">
         <MainAdminProfile
@@ -54,6 +57,7 @@ export default function MainAdminPage() {
         />
         <ViewOfficerDetails visible={visible} />
         <AddNewOfficer visible={visible} />
+        <AdminGrievanceView visible={visible} />
       </div>
       <Footer />
     </div>

@@ -1,63 +1,35 @@
 import React, { Fragment } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Loading from "./Loading";
-export default function MyGrievance(props) {
+export default function ViewOfficerDetails(props) {
   const [officerDetails, setOfficerDetails] = React.useState([]);
-  const token=localStorage.getItem("token");
-     let config = {
-       method: "get",
-       maxBodyLength: Infinity,
-       url: "/api/v1/manage/getOfficerData",
-       headers: {
-         Authorization: `Bearer ${token}`,
-       },
-     };
-     const [loading,setLoading]=React.useState(true)
+  const token = localStorage.getItem("token");
+  const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(true);
+
   React.useEffect(() => {
+    let config = {
+      method: "get",
+      maxBodyLength: Infinity,
+      url: "/api/v1/manage/getOfficerData",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
     axios
       .request(config)
       .then((response) => {
         console.log(JSON.stringify(response.data));
-        setOfficerDetails(response.data.data);
-      
-        setLoading(false)
+        setOfficerDetails(response.data.data || []);
+        setLoading(false);
       })
       .catch((error) => {
         console.log(error);
+        setLoading(false);
       });
-  },[])
-    officerDetails.sort(function (a, b) {
-      return a.department > b.department
-        ? 1
-        : b.department > a.department
-        ? -1
-        : 0;
-    });
-  const officerData = officerDetails.map((officer) => (
-    <Fragment>
-      <tr>
-        <td className="px-4 py-3 text-ms font-semibold border">{officer._id}</td>
-        <td className="px-4 py-3 text-ms font-semibold border">{officer.name}</td>
-        <td className="px-4 py-3 text-ms font-semibold border">{officer.email}</td>
-        <td className="px-4 py-3 text-ms font-semibold border">
-          {officer.department}
-        </td>
-        <td className="px-4 py-3 text-ms font-semibold border">{officer.level}</td>
-        <td className="px-4 py-3 text-ms font-semibold border">
-          {officer.avgRating==null?"not rated yet":officer.avgRating}
-        </td>
-        <td className="px-4 py-3 text-ms font-semibold border">
-          {officer.pendingCount}
-        </td>
-        <td className="px-4 py-3 text-ms font-semibold border">
-          {officer.inProcessCount}
-        </td>
-        <td className="px-4 py-3 text-ms font-semibold border">
-          {officer.resolvedCount}
-        </td>
-      </tr>
-    </Fragment>
-  ));
+  }, []);
+
   function checkLogin() {
     if (!token) {
       navigate("/userAdminLogin");

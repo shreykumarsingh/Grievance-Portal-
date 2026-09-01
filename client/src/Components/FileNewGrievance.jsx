@@ -8,41 +8,39 @@ function FileNewGrievance(props) {
   function handleChange(e){
     setData({...data, [e.target.name]: e.target.value});
   }
-  const token = localStorage.getItem("token");
- let config = {
-   method: "post",
-   maxBodyLength: Infinity,
-   url: "/api/v1/complaints/",
-   headers: {
-     Authorization:
-       `Bearer ${token}`,
-     "Content-Type": "application/json",
-   },
-   data: data,
- };
   function handleSubmit(e){
-    console.log(data)
     e.preventDefault();
-    if(data.subject=="" || data.description=="" || data.department==""){
-      alert("Please fill all the fields");
+    const currentToken = localStorage.getItem("token");
+    if(!data.subject || !data.description || !data.department || data.department === "--SELECT--"){
+      alert("Please fill all the fields, including Department, Subject, and Description");
+      return;
     }
-    else{
-      setLoading(true)
-      axios
-        .request(config)
-        .then((response) => {
-          console.log(JSON.stringify(response.data));
-          setSubmit(true);
-          setLoading(false)
-          alert("Grievance Filed Successfully")
-          window.location.reload(true);
-        })
-        .catch((error) => {
-          console.log(error);
-          alert("Error Occured:"+error.response.data.message);
-        });
-    }
-
+    setLoading(true);
+    let requestConfig = {
+      method: "post",
+      maxBodyLength: Infinity,
+      url: "/api/v1/complaints/",
+      headers: {
+        Authorization: `Bearer ${currentToken}`,
+        "Content-Type": "application/json",
+      },
+      data: data,
+    };
+    axios
+      .request(requestConfig)
+      .then((response) => {
+        console.log(JSON.stringify(response.data));
+        setSubmit(true);
+        setLoading(false);
+        alert("Grievance Filed Successfully");
+        window.location.reload(true);
+      })
+      .catch((error) => {
+        setLoading(false);
+        console.log(error);
+        const errMsg = error.response?.data?.msg || error.response?.data?.message || error.message || "Something went wrong";
+        alert("Error Occurred: " + errMsg);
+      });
   }
   const [loading, setLoading] = React.useState(false);
   function checkLogin() {
